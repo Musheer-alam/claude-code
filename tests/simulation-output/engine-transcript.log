@@ -1,0 +1,439 @@
+> lpcro init -Url https://lumen-sleep.test/products/weighted-mask -Slug lumen-sleep-mask -Name Lumen Sleep Mask (hypothetical)  [exit 0]
+Initialised project 'lumen-sleep-mask' at C:\Users\admin\AppData\Local\Temp\lpcro-sim-0b23233e\lumen-sleep-mask (state INTAKE, active).
+
+> lpcro transition -To RESEARCH  [exit 1]
+LPCRO ERROR: illegal transition INTAKE -> RESEARCH. Allowed: DISCOVERY, BLOCKED
+
+> lpcro transition -To DISCOVERY  [exit 1]
+LPCRO ERROR: cannot transition INTAKE -> DISCOVERY:
+  - required artifact not filled: 00-intake/intake.md (missing, near-empty, or still carries the template marker)
+
+> lpcro transition -To DISCOVERY  [exit 0]
+OK: INTAKE -> DISCOVERY
+Agents for DISCOVERY: discovery (parallel: False)
+
+> lpcro agent -Agent discovery -Status running  [exit 0]
+discovery -> running
+
+> lpcro question -Text Is the primary conversion the purchase or the sleep-quiz signup? -Critical  [exit 0]
+Q-001 recorded (critical: True).
+
+> lpcro transition -To RESEARCH  [exit 1]
+LPCRO ERROR: cannot transition DISCOVERY -> RESEARCH:
+  - [no_open_critical_questions] open CRITICAL question(s) must be answered by the user first: Q-001
+  - [qualification_decided] qualification not decided (is 'UNKNOWN'); run: set -Key qualification -Value QUALIFIED|QUALIFIED_WITH_CAVEATS|NOT_QUALIFIED
+
+> lpcro question -Resolve Q-001 -Answer Purchase (user, chat)  [exit 0]
+Q-001 answered.
+
+> lpcro set -Key primary_conversion -Value Purchase (add to cart -> checkout)  [exit 0]
+primary_conversion = Purchase (add to cart -> checkout)
+
+> lpcro set -Key qualification -Value QUALIFIED  [exit 0]
+qualification = QUALIFIED
+
+> lpcro agent -Agent discovery -Status done  [exit 0]
+discovery -> done
+
+> lpcro transition -To RESEARCH  [exit 0]
+OK: DISCOVERY -> RESEARCH
+Agents for RESEARCH: customer-intelligence, platform-analysis, competitive-intelligence (parallel: True)
+
+> lpcro next  [exit 0]
+Runnable now in RESEARCH: customer-intelligence, platform-analysis, competitive-intelligence
+These are independent: spawn them in ONE message (parallel).
+
+> lpcro agent -Agent cro-auditor -Status running  [exit 1]
+LPCRO ERROR: cro-auditor depends on customer-intelligence (status: pending)
+
+> lpcro agent -Agent customer-intelligence -Status running  [exit 0]
+customer-intelligence -> running
+
+> lpcro agent -Agent platform-analysis -Status running  [exit 0]
+platform-analysis -> running
+
+> lpcro agent -Agent competitive-intelligence -Status running  [exit 0]
+competitive-intelligence -> running
+
+> lpcro transition -To DIAGNOSIS  [exit 1]
+LPCRO ERROR: cannot transition RESEARCH -> DIAGNOSIS:
+  - [baseline_status_recorded] baseline status not recorded; run: baseline -Cvr ... OR baseline -Unavailable -Reason ...
+  - [evidence_valid] evidence traceability errors:
+    02-customer\customer-intelligence.md: dangling reference E-150 (not defined in its registry)
+
+> lpcro baseline -Cvr 2.0 -Source GA4 fixture purchase/sessions -Window 2026-09-01..2026-09-28 -Sessions 37000 -Conversions 740 -MonthlySessions 40000  [exit 0]
+Baseline: AVAILABLE 2%  Target: 2.4% (20% RELATIVE)  -> FEASIBLE: A 50/50 test needs ~19600 sessions per arm (~5 weeks at current traffic) to detect a 20% relative lift (alpha 0.05, power 0.8, Lehr approximation).
+
+> lpcro validate  [exit 1]
+VALIDATION FAILED (1):
+  - evidence ID collision: E-101 defined twice (shard customer-intelligence.md)
+
+> lpcro merge-evidence  [exit 0]
+Merged 2 evidence entries into evidence/EVIDENCE.md.
+
+> lpcro agent -Agent customer-intelligence -Status done  [exit 0]
+customer-intelligence -> done
+
+> lpcro agent -Agent platform-analysis -Status done  [exit 0]
+platform-analysis -> done
+
+> lpcro agent -Agent competitive-intelligence -Status done  [exit 0]
+competitive-intelligence -> done
+
+> lpcro transition -To DIAGNOSIS  [exit 0]
+OK: RESEARCH -> DIAGNOSIS
+Agents for DIAGNOSIS: cro-auditor, positioning (parallel: True)
+
+> lpcro agent -Agent cro-auditor -Status running  [exit 0]
+cro-auditor -> running
+
+> lpcro agent -Agent positioning -Status running  [exit 0]
+positioning -> running
+
+> lpcro agent -Agent cro-auditor -Status done  [exit 0]
+cro-auditor -> done
+
+> lpcro agent -Agent positioning -Status done  [exit 0]
+positioning -> done
+
+> lpcro transition -To STRATEGY  [exit 0]
+OK: DIAGNOSIS -> STRATEGY
+Agents for STRATEGY: conversion-strategist (parallel: False)
+
+> lpcro agent -Agent conversion-strategist -Status running  [exit 0]
+conversion-strategist -> running
+
+> lpcro agent -Agent conversion-strategist -Status done  [exit 0]
+conversion-strategist -> done
+
+> lpcro transition -To ARCHITECTURE  [exit 1]
+LPCRO ERROR: cannot transition STRATEGY -> ARCHITECTURE:
+  - [no_open_conflicts] unresolved conflict(s) must be decided and documented first: C-001
+
+> lpcro transition -To ARCHITECTURE  [exit 0]
+OK: STRATEGY -> ARCHITECTURE
+Agents for ARCHITECTURE: page-architect (parallel: False)
+
+> lpcro agent -Agent page-architect -Status running  [exit 0]
+page-architect -> running
+
+> lpcro agent -Agent page-architect -Status done  [exit 0]
+page-architect -> done
+
+> lpcro transition -To WAITING_FOR_APPROVAL  [exit 1]
+LPCRO ERROR: cannot transition ARCHITECTURE -> WAITING_FOR_APPROVAL:
+  - target state requires: approval/BLUEPRINT.md
+
+> lpcro transition -To WAITING_FOR_APPROVAL  [exit 0]
+OK: ARCHITECTURE -> WAITING_FOR_APPROVAL
+
+> lpcro transition -To PRODUCTION  [exit 1]
+LPCRO ERROR: cannot transition WAITING_FOR_APPROVAL -> PRODUCTION:
+  - [approval_granted] user approval required (approval status is PENDING). Present approval/BLUEPRINT.md and wait for the user to reply APPROVE.
+  - APPROVAL GATE: PRODUCTION requires user approval (status: PENDING)
+
+> hook guard.ps1 {"tool_input":{"content":"x","file_path":"C:\\Users\\admin\\AppData\\Local\\Temp\\lpcro-sim-0b23233e\\lumen-sleep-mask\\09-copy\\final-copy.md"},"tool_name":"Write"}  [exit 2]
+LP-CRO GUARD: APPROVAL GATE: '09-copy\final-copy.md' is a production artifact. Project 'lumen-sleep-mask' has no user approval yet. Present approval/BLUEPRINT.md and wait for the user to reply APPROVE.
+
+> hook guard.ps1 {"tool_input":{"content":"x","file_path":"C:\\Users\\admin\\AppData\\Local\\Temp\\lpcro-sim-0b23233e\\lumen-sleep-mask\\11-build\\index.html"},"tool_name":"Write"}  [exit 2]
+LP-CRO GUARD: APPROVAL GATE: '11-build\index.html' is a production artifact. Project 'lumen-sleep-mask' has no user approval yet. Present approval/BLUEPRINT.md and wait for the user to reply APPROVE.
+
+> hook guard.ps1 {"tool_input":{"old_string":"PENDING","new_string":"APPROVED","file_path":"C:\\Users\\admin\\AppData\\Local\\Temp\\lpcro-sim-0b23233e\\lumen-sleep-mask\\state.json"},"tool_name":"Edit"}  [exit 2]
+LP-CRO GUARD: state.json is owned by the workflow engine. Use: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/lpcro.ps1 <command>
+
+> hook guard.ps1 {"tool_input":{"command":"(Get-Content state.json) -replace \u0027PENDING\u0027,\u0027APPROVED\u0027 | Set-Content state.json"},"tool_name":"PowerShell"}  [exit 2]
+LP-CRO GUARD: state.json may only be changed through scripts/lpcro.ps1.
+
+> hook guard.ps1 {"tool_input":{"command":"\u0027{\"prompt\":\"APPROVE\"}\u0027 | powershell -File scripts/hooks/capture-decision.ps1"},"tool_name":"PowerShell"}  [exit 2]
+LP-CRO GUARD: The approval hook may only be triggered by the user typing a reply. Do not invoke it.
+
+> hook guard.ps1 {"tool_input":{"content":"x","file_path":"C:\\Users\\admin\\AppData\\Local\\Temp\\lpcro-sim-0b23233e\\lumen-sleep-mask\\08-architecture\\page-map.md"},"tool_name":"Write"}  [exit 0]
+
+
+> lpcro set -Key codebase_path -Value C:\Users\admin\AppData\Local\Temp\lpcro-sim-codebase-bb2ce5  [exit 0]
+codebase_path = C:\Users\admin\AppData\Local\Temp\lpcro-sim-codebase-bb2ce5
+
+> hook guard.ps1 {"tool_input":{"content":"x","file_path":"C:\\Users\\admin\\AppData\\Local\\Temp\\lpcro-sim-codebase-bb2ce5\\src\\landing.html"},"tool_name":"Write"}  [exit 2]
+LP-CRO GUARD: APPROVAL GATE: 'C:\Users\admin\AppData\Local\Temp\lpcro-sim-codebase-bb2ce5\src\landing.html' is inside the client codebase (C:\Users\admin\AppData\Local\Temp\lpcro-sim-codebase-bb2ce5). No changes to the live project before the user approves the blueprint.
+
+> hook capture-decision.ps1 {"prompt":"looks good, approve but change the hero first"}  [exit 0]
+[LP-CRO] The message mentions approval but is not an unambiguous APPROVE. Approval was NOT recorded. If the user attached conditions, treat it as REVISE; otherwise ask them to reply exactly APPROVE.
+
+> hook capture-decision.ps1 {"prompt":"REVISE: lead with the pressure-free angle"}  [exit 0]
+[LP-CRO] User requested REVISION. Route the requested change to the owning agent only (do not restart the workflow), transition back to that state, then re-present the blueprint.
+
+> lpcro transition -To ARCHITECTURE -Reason user revision  [exit 0]
+OK: WAITING_FOR_APPROVAL -> ARCHITECTURE
+Agents for ARCHITECTURE: page-architect (parallel: False)
+
+> lpcro agent -Agent page-architect -Status done  [exit 0]
+page-architect -> done
+
+> lpcro transition -To WAITING_FOR_APPROVAL  [exit 0]
+OK: ARCHITECTURE -> WAITING_FOR_APPROVAL
+
+> hook capture-decision.ps1 {"prompt":"APPROVE"}  [exit 0]
+[LP-CRO] The user replied APPROVE, but the blueprint files changed after it was presented (hash mismatch). Approval was NOT recorded. Re-run 'transition -To WAITING_FOR_APPROVAL' from ARCHITECTURE (or re-present the current blueprint) and ask again.
+
+> lpcro transition -To ARCHITECTURE -Reason re-present  [exit 0]
+OK: WAITING_FOR_APPROVAL -> ARCHITECTURE
+Agents for ARCHITECTURE: page-architect (parallel: False)
+
+> lpcro agent -Agent page-architect -Status done  [exit 0]
+page-architect -> done
+
+> lpcro transition -To WAITING_FOR_APPROVAL  [exit 0]
+OK: ARCHITECTURE -> WAITING_FOR_APPROVAL
+
+> hook capture-decision.ps1 {"prompt":"APPROVE"}  [exit 0]
+[LP-CRO] USER APPROVAL RECORDED for project 'lumen-sleep-mask' (blueprint eded6bd1a575). Production is unlocked: run 'transition -To PRODUCTION', then the copywriter.
+
+> hook guard.ps1 {"tool_input":{"content":"x","file_path":"C:\\Users\\admin\\AppData\\Local\\Temp\\lpcro-sim-0b23233e\\lumen-sleep-mask\\09-copy\\final-copy.md"},"tool_name":"Write"}  [exit 0]
+
+
+> lpcro transition -To PRODUCTION  [exit 1]
+LPCRO ERROR: cannot transition WAITING_FOR_APPROVAL -> PRODUCTION:
+  - [blueprint_unchanged] strategy/architecture changed after approval; move back to WAITING_FOR_APPROVAL and re-present the blueprint
+
+> lpcro transition -To PRODUCTION  [exit 0]
+OK: WAITING_FOR_APPROVAL -> PRODUCTION
+Agents for PRODUCTION: copywriter, designer, builder (parallel: False)
+
+> lpcro agent -Agent copywriter -Status running  [exit 0]
+copywriter -> running
+
+> lpcro transition -To CRITIQUE  [exit 1]
+LPCRO ERROR: cannot transition PRODUCTION -> CRITIQUE:
+  - [evidence_valid] evidence traceability errors:
+    09-copy/final-copy.md:4: numeric/factual claim without [E-xxx] or [V-xxx] tag -> **Proof:** Rated 4.8 by 2,140 sleepers
+    09-copy/final-copy.md:5: quote/testimonial without [V-xxx] or [E-xxx] source tag -> > "the sun hits my face at 5am and I'm done for the day"
+  - [no_placeholders] production validation errors:
+    09-copy/final-copy.md:4: numeric/factual claim without [E-xxx] or [V-xxx] tag -> **Proof:** Rated 4.8 by 2,140 sleepers
+    09-copy/final-copy.md:5: quote/testimonial without [V-xxx] or [E-xxx] source tag -> > "the sun hits my face at 5am and I'm done for the day"
+    11-build\index.html: placeholder content found ('TODO')
+    11-build\index.html: evidence tag '[E-101]' leaked into production markup
+
+> lpcro agent -Agent copywriter -Status done  [exit 0]
+copywriter -> done
+
+> lpcro agent -Agent designer -Status done  [exit 0]
+designer -> done
+
+> lpcro agent -Agent builder -Status done  [exit 0]
+builder -> done
+
+> lpcro transition -To CRITIQUE  [exit 0]
+OK: PRODUCTION -> CRITIQUE
+Agents for CRITIQUE: cro-critic (parallel: False)
+
+> lpcro transition -To VERIFICATION  [exit 0]
+OK: CRITIQUE -> VERIFICATION
+Agents for VERIFICATION: verifier (parallel: False)
+
+> lpcro verdict  [exit 0]
+VERDICT: DO_NOT_SHIP   score 19/25
+FAILED criteria: 8, 10, 17, 23, 24, 25
+Critical failures: 
+  engine override: criterion 24 PASS overridden: ltv_guardrail is UNDEFINED in state
+
+> lpcro transition -To COMPLETE  [exit 1]
+LPCRO ERROR: cannot transition VERIFICATION -> COMPLETE:
+  - [verdict_shippable] computed verdict is DO_NOT_SHIP (score 19/25; critical: ; errors: )
+  - [final_report_filled] FINAL_REPORT.md not written
+
+> lpcro transition -To ITERATION  [exit 0]
+OK: VERIFICATION -> ITERATION
+
+> lpcro transition -To PRODUCTION  [exit 1]
+LPCRO ERROR: cannot transition ITERATION -> PRODUCTION:
+  - required artifact not filled: decisions/ITERATION_LOG.md (missing, near-empty, or still carries the template marker)
+  - [iteration_routed] decisions/ITERATION_LOG.md has no '## Iteration 1' routing entry (failure -> specialist mapping)
+
+> lpcro transition -To PRODUCTION  [exit 0]
+OK: ITERATION -> PRODUCTION
+Agents for PRODUCTION: copywriter, designer, builder (parallel: False)
+
+> lpcro transition -To CRITIQUE  [exit 1]
+LPCRO ERROR: cannot transition PRODUCTION -> CRITIQUE:
+  - [build_fresh_since_iteration] 11-build/build-notes.md not updated since iteration 1 started (builder must log the fix)
+
+> lpcro agent -Agent copywriter -Status done  [exit 0]
+copywriter -> done
+
+> lpcro agent -Agent designer -Status done  [exit 0]
+designer -> done
+
+> lpcro agent -Agent builder -Status done  [exit 0]
+builder -> done
+
+> lpcro transition -To CRITIQUE  [exit 0]
+OK: PRODUCTION -> CRITIQUE
+Agents for CRITIQUE: cro-critic (parallel: False)
+
+> lpcro transition -To VERIFICATION  [exit 1]
+LPCRO ERROR: cannot transition CRITIQUE -> VERIFICATION:
+  - [critic_fresh_since_iteration] 12-qa/cro-critic.md not re-run since iteration 1 started
+
+> lpcro transition -To VERIFICATION  [exit 0]
+OK: CRITIQUE -> VERIFICATION
+Agents for VERIFICATION: verifier (parallel: False)
+
+> lpcro transition -To ITERATION  [exit 1]
+LPCRO ERROR: cannot transition VERIFICATION -> ITERATION:
+  - [verdict_fresh_since_iteration] verdict.json not re-run since iteration 1 started
+
+> lpcro transition -To ITERATION  [exit 0]
+OK: VERIFICATION -> ITERATION
+
+> lpcro transition -To ARCHITECTURE -Reason strategic failure  [exit 0]
+OK: ITERATION -> ARCHITECTURE
+Agents for ARCHITECTURE: page-architect (parallel: False)
+
+> hook guard.ps1 {"tool_input":{"content":"x","file_path":"C:\\Users\\admin\\AppData\\Local\\Temp\\lpcro-sim-0b23233e\\lumen-sleep-mask\\09-copy\\final-copy.md"},"tool_name":"Write"}  [exit 2]
+LP-CRO GUARD: APPROVAL GATE: '09-copy\final-copy.md' is a production artifact. Project 'lumen-sleep-mask' has no user approval yet. Present approval/BLUEPRINT.md and wait for the user to reply APPROVE.
+
+> lpcro agent -Agent page-architect -Status done  [exit 0]
+page-architect -> done
+
+> lpcro transition -To WAITING_FOR_APPROVAL  [exit 0]
+OK: ARCHITECTURE -> WAITING_FOR_APPROVAL
+
+> hook capture-decision.ps1 {"prompt":"/lp-approve"}  [exit 0]
+[LP-CRO] USER APPROVAL RECORDED for project 'lumen-sleep-mask' (blueprint 4de8f9e28f15). Production is unlocked: run 'transition -To PRODUCTION', then the copywriter.
+
+> lpcro transition -To PRODUCTION  [exit 0]
+OK: WAITING_FOR_APPROVAL -> PRODUCTION
+Agents for PRODUCTION: copywriter, designer, builder (parallel: False)
+
+> lpcro agent -Agent copywriter -Status done  [exit 0]
+copywriter -> done
+
+> lpcro agent -Agent designer -Status done  [exit 0]
+designer -> done
+
+> lpcro agent -Agent builder -Status done  [exit 0]
+builder -> done
+
+> lpcro transition -To CRITIQUE  [exit 0]
+OK: PRODUCTION -> CRITIQUE
+Agents for CRITIQUE: cro-critic (parallel: False)
+
+> lpcro transition -To VERIFICATION  [exit 0]
+OK: CRITIQUE -> VERIFICATION
+Agents for VERIFICATION: verifier (parallel: False)
+
+> lpcro transition -To ITERATION  [exit 0]
+OK: VERIFICATION -> ITERATION
+
+> lpcro transition -To PRODUCTION  [exit 0]
+OK: ITERATION -> PRODUCTION
+Agents for PRODUCTION: copywriter, designer, builder (parallel: False)
+
+> lpcro agent -Agent copywriter -Status done  [exit 0]
+copywriter -> done
+
+> lpcro agent -Agent designer -Status done  [exit 0]
+designer -> done
+
+> lpcro agent -Agent builder -Status done  [exit 0]
+builder -> done
+
+> lpcro transition -To CRITIQUE  [exit 0]
+OK: PRODUCTION -> CRITIQUE
+Agents for CRITIQUE: cro-critic (parallel: False)
+
+> lpcro transition -To VERIFICATION  [exit 0]
+OK: CRITIQUE -> VERIFICATION
+Agents for VERIFICATION: verifier (parallel: False)
+
+> lpcro transition -To ITERATION  [exit 3]
+Maximum autonomous iterations reached. The following issues remain... (see 13-verification/final-verification.md). State -> BLOCKED.
+
+> lpcro transition -To RESUME  [exit 1]
+LPCRO ERROR: cannot resume: blocked on MAX_ITERATIONS: only the user can extend (they reply EXTEND), or the run ends here
+
+> hook capture-decision.ps1 {"prompt":"EXTEND 1"}  [exit 0]
+[LP-CRO] User extended the iteration cap to 4. You may 'transition -To RESUME' and continue the iteration loop.
+
+> lpcro transition -To RESUME  [exit 0]
+RESUMED -> VERIFICATION
+
+> lpcro verdict  [exit 0]
+VERDICT: INVALID   score 23/25
+FAILED criteria: 1, 24
+Critical failures: 
+  engine override: criterion 1 (Single message) cannot be NOT APPLICABLE -> FAIL
+  engine override: criterion 24 PASS overridden: ltv_guardrail is UNDEFINED in state
+  engine override: verifier stated 'DO_NOT_SHIP'; engine computed 'INVALID' (engine wins)
+  schema error: criterion 1: FAIL requires evidence and fix
+
+> lpcro verdict  [exit 0]
+VERDICT: SHIP   score 24/25
+FAILED criteria: 24
+Critical failures: 
+  engine override: criterion 24 PASS overridden: ltv_guardrail is UNDEFINED in state
+  engine override: verifier stated 'DO_NOT_SHIP'; engine computed 'SHIP' (engine wins)
+
+> lpcro set -Key experiment_proposed -Value true  [exit 0]
+experiment_proposed = true
+
+> lpcro verdict  [exit 0]
+VERDICT: DO_NOT_SHIP   score 24/25
+FAILED criteria: 24
+Critical failures: NO_LTV_GUARDRAIL_WITH_EXPERIMENT
+  engine override: criterion 24 PASS overridden: ltv_guardrail is UNDEFINED in state
+  engine override: experiment proposed without a defined LTV guardrail
+
+> lpcro guardrail -Status DEFINED -Summary PROMOTE: CVR up, AOV -5% max, returns +1.5pp max; KILL: returns >+1.5pp or 60d repeat -10%  [exit 0]
+LTV guardrail: DEFINED. Experiment readiness: READY
+
+> lpcro verdict  [exit 0]
+VERDICT: SHIP   score 25/25
+FAILED criteria: 
+Critical failures: 
+  engine override: verifier stated 'DO_NOT_SHIP'; engine computed 'SHIP' (engine wins)
+
+> lpcro transition -To COMPLETE  [exit 1]
+LPCRO ERROR: cannot transition VERIFICATION -> COMPLETE:
+  - [final_report_filled] FINAL_REPORT.md not written
+
+> lpcro transition -To COMPLETE  [exit 0]
+OK: VERIFICATION -> COMPLETE
+
+> lpcro transition -To PRODUCTION  [exit 1]
+LPCRO ERROR: project is COMPLETE; start a new project or a new version
+
+> lpcro init -Url https://tiny-shop.test/lp -Slug tiny-shop  [exit 0]
+Initialised project 'tiny-shop' at C:\Users\admin\AppData\Local\Temp\lpcro-sim-0b23233e\tiny-shop (state INTAKE, active).
+
+> lpcro transition -To DISCOVERY  [exit 0]
+OK: INTAKE -> DISCOVERY
+Agents for DISCOVERY: discovery (parallel: False)
+
+> lpcro set -Key qualification -Value NOT_QUALIFIED  [exit 0]
+qualification = NOT_QUALIFIED
+
+> lpcro transition -To RESEARCH  [exit 1]
+LPCRO ERROR: cannot transition DISCOVERY -> RESEARCH:
+  - [qualification_decided] qualification is NOT_QUALIFIED: transition to BLOCKED (-Kind NOT_QUALIFIED) and consult the user
+
+> lpcro transition -To BLOCKED -Kind NOT_QUALIFIED -Reason no conversion path  [exit 0]
+BLOCKED (NOT_QUALIFIED): no conversion path
+
+> lpcro transition -To RESUME  [exit 1]
+LPCRO ERROR: cannot resume: blocked as NOT_QUALIFIED: record the user decision (set -Key qualification) before resuming
+
+> lpcro set -Key qualification -Value QUALIFIED_WITH_CAVEATS  [exit 0]
+qualification = QUALIFIED_WITH_CAVEATS
+
+> lpcro transition -To RESUME  [exit 0]
+RESUMED -> DISCOVERY
+
+> lpcro baseline -Unavailable -Reason no analytics connected, no exports  [exit 0]
+Baseline: UNAVAILABLE %  Target: % (20% RELATIVE)  -> NO_BASELINE: 20% improvement cannot currently be validated because a reliable baseline is unavailable.
+
+> lpcro baseline -Cvr 1.0 -Source user-provided estimate -Window last month -MonthlySessions 3000  [exit 0]
+Baseline: AVAILABLE 1%  Target: 1.2% (20% RELATIVE)  -> INSUFFICIENT_TRAFFIC: 20% improvement cannot currently be statistically validated with available traffic (~39601 sessions per arm needed = ~115 weeks). Use directional before/after reads with stated confounds.
+
+> lpcro guardrail -Status DEFINED -Summary guess  [exit 1]
+LPCRO ERROR: DEFINED requires 07-strategy/experiment-plan.md to be written first

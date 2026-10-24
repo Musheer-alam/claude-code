@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lpcro/state.schema.json",
+  "title": "Project state (projects/<slug>/state.json)",
+  "description": "Owned by scripts/lpcro.ps1. Never edited by hand (guard hook blocks it). Approval fields are written only by scripts/hooks/capture-decision.ps1.",
+  "type": "object",
+  "required": ["schema_version", "project", "state", "agents", "approval", "iteration", "baseline", "target", "validation", "ltv_guardrail", "experiment", "final_status"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "project": {
+      "type": "object",
+      "required": ["slug", "landing_url"],
+      "properties": {
+        "slug": {"type": "string"}, "name": {"type": "string"},
+        "landing_url": {"type": "string"}, "business_url": {"type": ["string", "null"]},
+        "product": {"type": ["string", "null"]}, "primary_conversion": {"type": ["string", "null"]},
+        "traffic_source": {"type": ["string", "null"]}, "codebase_path": {"type": ["string", "null"]}
+      }
+    },
+    "state": {"enum": ["INTAKE", "DISCOVERY", "RESEARCH", "DIAGNOSIS", "STRATEGY", "ARCHITECTURE", "WAITING_FOR_APPROVAL", "PRODUCTION", "CRITIQUE", "VERIFICATION", "ITERATION", "COMPLETE", "BLOCKED"]},
+    "blocked": {"type": "object", "properties": {"from": {}, "reason": {}, "kind": {"enum": ["USER_INPUT", "NOT_QUALIFIED", "URL_INACCESSIBLE", "MAX_ITERATIONS", "CONFLICT", "OTHER", null]}}},
+    "agents": {"type": "object", "additionalProperties": {"enum": ["pending", "running", "done", "failed", "skipped"]}},
+    "qualification": {"enum": ["UNKNOWN", "QUALIFIED", "QUALIFIED_WITH_CAVEATS", "NOT_QUALIFIED"]},
+    "questions": {"type": "array", "items": {"type": "object", "required": ["id", "text", "critical", "status"]}},
+    "approval": {
+      "type": "object",
+      "properties": {
+        "status": {"enum": ["NOT_REQUESTED", "PENDING", "APPROVED", "REVISION_REQUESTED", "RESTART_REQUESTED", "STALE", "INVALIDATED"]},
+        "blueprint_hash": {"type": ["string", "null"]},
+        "approved_hash": {"type": ["string", "null"]},
+        "source": {"enum": ["user-prompt-hook", null]}
+      }
+    },
+    "iteration": {"type": "object", "properties": {"count": {"type": "integer", "minimum": 0}, "max": {"type": "integer"}}},
+    "baseline": {"type": "object", "properties": {"available": {"enum": ["UNKNOWN", "AVAILABLE", "UNAVAILABLE"]}, "value_pct": {"type": ["number", "null"]}}},
+    "target": {"type": "object", "properties": {"relative_lift_pct": {"const": 20}, "target_value_pct": {"type": ["number", "null"]}}},
+    "validation": {"type": "object", "properties": {"status": {"enum": ["NO_BASELINE", "FEASIBLE", "INSUFFICIENT_TRAFFIC", "TRAFFIC_UNKNOWN"]}}},
+    "ltv_guardrail": {"type": "object", "properties": {"status": {"enum": ["DEFINED", "UNDEFINED"]}}},
+    "final_status": {"enum": ["IN_PROGRESS", "BLOCKED", "STOPPED_MAX_ITERATIONS", "SHIP", "SHIP_WITH_FIX_LIST"]}
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lpcro/verdict.schema.json",
+  "title": "Final verification verdict (13-verification/verdict.json)",
+  "description": "Written by the verifier. The engine (lpcro.ps1 verdict) recomputes the verdict from these results plus its own state checks; stated_verdict is informational.",
+  "type": "object",
+  "required": ["version", "iteration", "criteria", "critical_failures"],
+  "properties": {
+    "_template": {"type": "boolean", "description": "Present only in the unfilled template. Remove when writing."},
+    "version": {"type": "string", "pattern": "^v\\d+$"},
+    "iteration": {"type": "integer", "minimum": 0},
+    "stated_verdict": {"enum": ["SHIP", "SHIP_WITH_FIXES", "DO_NOT_SHIP", null]},
+    "criteria": {
+      "type": "array", "minItems": 25, "maxItems": 25,
+      "items": {
+        "type": "object",
+        "required": ["id", "result", "evidence"],
+        "properties": {
+          "id": {"type": "integer", "minimum": 1, "maximum": 25},
+          "result": {"enum": ["PASS", "FAIL", "NA"]},
+          "evidence": {"type": "string", "minLength": 1},
+          "fix": {"type": "string", "description": "Required when result is FAIL."},
+          "na_reason": {"type": "string", "description": "Required when result is NA. Criteria 1-7, 9, 11-13, 16-21, 24 may never be NA."}
+        }
+      }
+    },
+    "critical_failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "evidence", "fix"],
+        "properties": {
+          "type": {"enum": ["MISSING_CONVERSION_OBJECTIVE", "UNSUPPORTED_FACTUAL_CLAIM", "FABRICATED_TESTIMONIAL", "MISSING_BASELINE_WHERE_DATA_EXISTS", "BROKEN_PRIMARY_CTA", "MAJOR_MOBILE_FAILURE", "SERIOUS_ACCESSIBILITY_OR_FUNCTIONALITY", "NO_LTV_GUARDRAIL_WITH_EXPERIMENT"]},
+          "evidence": {"type": "string"},
+          "fix": {"type": "string"}
+        }
+      }
+    }
+  }
+}

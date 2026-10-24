@@ -1,0 +1,221 @@
+{
+  "version": "1.0",
+  "description": "Single source of truth for the LP-CRO workflow state machine. Read by scripts/lpcro.ps1 (enforcement) and by the orchestrator (planning). Paths are relative to projects/<slug>/.",
+  "max_iterations": 3,
+  "approval_states": ["PRODUCTION", "CRITIQUE", "VERIFICATION", "ITERATION", "COMPLETE"],
+  "blueprint_files": [
+    "approval/BLUEPRINT.md",
+    "07-strategy/conversion-strategy.md",
+    "07-strategy/conversion-hypotheses.md",
+    "08-architecture/page-archetype.md",
+    "08-architecture/page-map.md",
+    "08-architecture/section-jobs.md"
+  ],
+  "gated_paths_before_approval": [
+    "09-copy/",
+    "10-design/",
+    "11-build/",
+    "12-qa/",
+    "13-verification/"
+  ],
+  "agent_order": [
+    "discovery",
+    "customer-intelligence",
+    "platform-analysis",
+    "competitive-intelligence",
+    "cro-auditor",
+    "positioning",
+    "conversion-strategist",
+    "page-architect",
+    "copywriter",
+    "designer",
+    "builder",
+    "cro-critic",
+    "verifier"
+  ],
+  "agent_dependencies": {
+    "discovery": [],
+    "customer-intelligence": ["discovery"],
+    "platform-analysis": ["discovery"],
+    "competitive-intelligence": ["discovery"],
+    "cro-auditor": ["discovery", "customer-intelligence", "platform-analysis", "competitive-intelligence"],
+    "positioning": ["discovery", "customer-intelligence", "platform-analysis", "competitive-intelligence"],
+    "conversion-strategist": ["cro-auditor", "positioning"],
+    "page-architect": ["conversion-strategist"],
+    "copywriter": ["page-architect", "USER_APPROVAL"],
+    "designer": ["copywriter"],
+    "builder": ["designer"],
+    "cro-critic": ["builder"],
+    "verifier": ["cro-critic"]
+  },
+  "states": {
+    "INTAKE": {
+      "next": ["DISCOVERY", "BLOCKED"],
+      "agents": [],
+      "parallel": false,
+      "exit_requires": ["00-intake/intake.md"],
+      "exit_checks": []
+    },
+    "DISCOVERY": {
+      "next": ["RESEARCH", "INTAKE", "BLOCKED"],
+      "agents": ["discovery"],
+      "parallel": false,
+      "exit_requires": ["01-discovery/discovery.md"],
+      "exit_checks": ["no_open_critical_questions", "qualification_decided"]
+    },
+    "RESEARCH": {
+      "next": ["DIAGNOSIS", "DISCOVERY", "BLOCKED"],
+      "agents": ["customer-intelligence", "platform-analysis", "competitive-intelligence"],
+      "parallel": true,
+      "exit_requires": [
+        "02-customer/customer-intelligence.md",
+        "02-customer/verbatim-bank.md",
+        "03-data/platform-analysis.md",
+        "04-market/competitive-intelligence.md"
+      ],
+      "exit_checks": ["baseline_status_recorded", "evidence_valid"]
+    },
+    "DIAGNOSIS": {
+      "next": ["STRATEGY", "RESEARCH", "BLOCKED"],
+      "agents": ["cro-auditor", "positioning"],
+      "parallel": true,
+      "exit_requires": [
+        "05-audit/existing-page-audit.md",
+        "05-audit/conversion-leak-inventory.md",
+        "06-positioning/positioning.md"
+      ],
+      "exit_checks": ["evidence_valid"]
+    },
+    "STRATEGY": {
+      "next": ["ARCHITECTURE", "DIAGNOSIS", "RESEARCH", "BLOCKED"],
+      "agents": ["conversion-strategist"],
+      "parallel": false,
+      "exit_requires": [
+        "07-strategy/conversion-strategy.md",
+        "07-strategy/conversion-hypotheses.md",
+        "07-strategy/experiment-plan.md"
+      ],
+      "exit_checks": ["evidence_valid", "no_open_conflicts"]
+    },
+    "ARCHITECTURE": {
+      "next": ["WAITING_FOR_APPROVAL", "STRATEGY", "BLOCKED"],
+      "agents": ["page-architect"],
+      "parallel": false,
+      "exit_requires": [
+        "08-architecture/page-archetype.md",
+        "08-architecture/page-map.md",
+        "08-architecture/section-jobs.md",
+        "08-architecture/wireframe-spec.md"
+      ],
+      "exit_checks": ["evidence_valid"]
+    },
+    "WAITING_FOR_APPROVAL": {
+      "next": ["PRODUCTION", "ARCHITECTURE", "STRATEGY", "DIAGNOSIS", "RESEARCH", "DISCOVERY", "INTAKE", "BLOCKED"],
+      "agents": [],
+      "parallel": false,
+      "entry_requires": ["approval/BLUEPRINT.md"],
+      "exit_requires": [],
+      "exit_checks_by_target": {
+        "PRODUCTION": ["approval_granted", "blueprint_unchanged"]
+      }
+    },
+    "PRODUCTION": {
+      "next": ["CRITIQUE", "BLOCKED"],
+      "agents": ["copywriter", "designer", "builder"],
+      "parallel": false,
+      "exit_requires": [
+        "09-copy/final-copy.md",
+        "10-design/design-system.md",
+        "10-design/design-spec.md",
+        "10-design/component-spec.md",
+        "11-build/build-notes.md"
+      ],
+      "exit_checks": ["approval_granted", "evidence_valid", "no_placeholders", "build_fresh_since_iteration"]
+    },
+    "CRITIQUE": {
+      "next": ["VERIFICATION", "PRODUCTION", "BLOCKED"],
+      "agents": ["cro-critic"],
+      "parallel": false,
+      "exit_requires": ["12-qa/cro-critic.md"],
+      "exit_checks": ["critic_fresh_since_iteration"]
+    },
+    "VERIFICATION": {
+      "next": ["COMPLETE", "ITERATION", "BLOCKED"],
+      "agents": ["verifier"],
+      "parallel": false,
+      "exit_requires": ["13-verification/final-verification.md", "13-verification/verdict.json"],
+      "exit_checks": ["verdict_fresh_since_iteration"],
+      "exit_checks_by_target": {
+        "COMPLETE": ["verdict_shippable", "evidence_valid", "no_placeholders", "final_report_filled"],
+        "ITERATION": ["verdict_not_shippable_or_fixes_requested", "iterations_remaining"]
+      }
+    },
+    "ITERATION": {
+      "next": ["PRODUCTION", "ARCHITECTURE", "STRATEGY", "BLOCKED"],
+      "agents": [],
+      "parallel": false,
+      "exit_requires": ["decisions/ITERATION_LOG.md"],
+      "exit_checks": ["iteration_routed"]
+    },
+    "COMPLETE": {
+      "next": [],
+      "agents": [],
+      "parallel": false,
+      "exit_requires": []
+    },
+    "BLOCKED": {
+      "next": ["RESUME"],
+      "agents": [],
+      "parallel": false,
+      "exit_requires": [],
+      "exit_checks": ["block_resolvable"]
+    }
+  },
+  "verification": {
+    "criteria": [
+      {"id": 1,  "group": "STRATEGY", "name": "Single message",                        "na_allowed": false},
+      {"id": 2,  "group": "STRATEGY", "name": "Named audience",                        "na_allowed": false},
+      {"id": 3,  "group": "STRATEGY", "name": "Customer-language problem",             "na_allowed": false},
+      {"id": 4,  "group": "STRATEGY", "name": "Differentiation",                       "na_allowed": false},
+      {"id": 5,  "group": "STRATEGY", "name": "Offer clarity",                         "na_allowed": false},
+      {"id": 6,  "group": "STRATEGY", "name": "Ranked objections",                     "na_allowed": false},
+      {"id": 7,  "group": "COPY",     "name": "Customer-language headline",            "na_allowed": false},
+      {"id": 8,  "group": "COPY",     "name": "Quantified proof",                      "na_allowed": true},
+      {"id": 9,  "group": "COPY",     "name": "Explicit objection inventory",          "na_allowed": false},
+      {"id": 10, "group": "COPY",     "name": "Expectation setting",                   "na_allowed": true},
+      {"id": 11, "group": "COPY",     "name": "CTA clarity",                           "na_allowed": false},
+      {"id": 12, "group": "UX",       "name": "Mobile-first",                          "na_allowed": false},
+      {"id": 13, "group": "UX",       "name": "Scannability",                          "na_allowed": false},
+      {"id": 14, "group": "UX",       "name": "Friction redistributed",                "na_allowed": true},
+      {"id": 15, "group": "UX",       "name": "Secondary conversion",                  "na_allowed": true},
+      {"id": 16, "group": "DESIGN",   "name": "Long-term credibility (2027 test)",     "na_allowed": false},
+      {"id": 17, "group": "DESIGN",   "name": "Proof before first scroll",             "na_allowed": false},
+      {"id": 18, "group": "DESIGN",   "name": "Hierarchy encodes priority",            "na_allowed": false},
+      {"id": 19, "group": "DESIGN",   "name": "Component consistency",                 "na_allowed": false},
+      {"id": 20, "group": "DESIGN",   "name": "Mobile performance",                    "na_allowed": false},
+      {"id": 21, "group": "CRO",      "name": "Baseline recorded",                     "na_allowed": false},
+      {"id": 22, "group": "CRO",      "name": "Message match to ads",                  "na_allowed": true},
+      {"id": 23, "group": "CRO",      "name": "Specific risk reversal",                "na_allowed": true},
+      {"id": 24, "group": "CRO",      "name": "LTV kill rule / guardrail",             "na_allowed": false},
+      {"id": 25, "group": "CRO",      "name": "Wrong-fit filter",                      "na_allowed": true}
+    ],
+    "critical_failure_types": [
+      "MISSING_CONVERSION_OBJECTIVE",
+      "UNSUPPORTED_FACTUAL_CLAIM",
+      "FABRICATED_TESTIMONIAL",
+      "MISSING_BASELINE_WHERE_DATA_EXISTS",
+      "BROKEN_PRIMARY_CTA",
+      "MAJOR_MOBILE_FAILURE",
+      "SERIOUS_ACCESSIBILITY_OR_FUNCTIONALITY",
+      "NO_LTV_GUARDRAIL_WITH_EXPERIMENT"
+    ],
+    "thresholds": {"ship": 24, "ship_with_fixes": 21}
+  },
+  "experimentation": {
+    "target_relative_lift": 0.20,
+    "alpha": 0.05,
+    "power": 0.80,
+    "sample_size_rule": "Lehr approximation: n_per_arm = 16 * p * (1 - p) / (p * lift)^2",
+    "max_reasonable_test_weeks": 8
+  }
+}

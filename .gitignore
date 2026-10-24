@@ -1,0 +1,14 @@
+# Per-run optimisation projects hold client data; keep the folder, not its contents
+projects/*
+!projects/.gitkeep
+
+# Local Claude Code overrides
+.claude/settings.local.json
+
+# OS / editor noise
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+.vscode/
+.idea/
